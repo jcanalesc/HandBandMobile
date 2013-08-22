@@ -1,0 +1,287 @@
+<!DOCTYPE html> 
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <title>Single page template</title> 
+    
+    <link rel="stylesheet" type="text/css" href="themes/handband.min.css" />
+    <link rel="stylesheet" href="jqm/jquery.mobile.structure-1.3.2.min.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.2.min.css"> -->
+    <style type="text/css">
+    span.ui-btn-inner
+    {
+        padding: .9em 20px;
+    }
+    .flot-tick-label
+    {
+        color: #fff;
+    }
+    #grafico-sup
+    {
+        height: 20px;
+    }
+    #landscape, #landscape-content
+    {
+        background-image: linear-gradient(#404f78,#182d5c);
+    }
+    #landscape .ui-content
+    {
+        padding: 0px;
+        background-image: linear-gradient(#404f78,#182d5c);
+    }
+    ul.statitem li.ui-li
+    {
+        padding: 1px;
+    }
+    ul.statitem div.ui-block-a
+    {
+        padding: 1em;
+    }
+    ul.statitem span.ui-btn-inner
+    {
+        font-size: 27px;
+        padding: 5px;
+    }
+    span.punto
+    {
+        display: inline-block;
+        width: .6em;
+        height: .6em;
+        -webkit-border-radius: .3em;
+        border-radius: .3em;
+        background-color: #969696;
+        -moz-box-shadow: 0 0 2px 2px #111;
+        -webkit-box-shadow: 0 0 2px 2px #111;
+        box-shadow: 0 0 2px 2px #111;
+    }
+    span.punto-activo
+    {
+        background-color: #fff;
+    }
+    div.footer-central div.ui-block-a
+    {
+        width: 100%;
+    }
+    </style>
+    <script src="js/jquery-1.9.1.min.js"></script>
+    <script src="js/jquery.mobile-1.3.2.min.js"></script>
+    <script type="text/javascript" src="js/raphael-min.js"></script>
+    <script type="text/javascript" src="js/g.raphael-min.js"></script>
+    <script type="text/javascript" src="js/g.line-min.js"></script>
+    <script type="text/javascript" src="js/dummy-data.js"></script>
+    <script type="text/javascript">
+    <!--
+    var hgraph = null, igraph = null;
+    var viewport_w = window.innerWidth;
+    var viewport_h = window.innerHeight;
+    var chart = null, chart_small = null;
+    var datax = [], datay = [];
+
+    function showgrafico()
+    {
+        $.mobile.changePage("#landscape", {changeHash: false, transition: "none"});
+        
+    }
+    function orientationChange(e)
+    {
+        if (window.orientation != 0)
+        {
+            showgrafico();
+        }
+        else
+        {
+
+            $.mobile.changePage("#main", {changeHash: false, transition: "none" });
+        }
+    }
+    function updateg()
+        {
+            datay = datay.slice(1);
+
+            var fluctuacion = 2.0;
+
+            var nextval = datay.unshift() + (-fluctuacion/2 + Math.random() * fluctuacion);
+            if (nextval > 100) nextval = 100;
+            if (nextval < 0) nextval = 0;
+            datay.push(nextval);
+            if (chart != null)
+                chart.remove();
+            //g.txtAttr = { font: '12px Arial, sans-serif', fill: '#fff' };
+            chart = hgraph.linechart(10,5,viewport_h-10, viewport_w - 40, datax, datay, { axis: "0 0 1 1", colors: ["#fff"], smooth: true, shade: true});
+
+        }
+    function valores(cant)
+    {
+        var datos = [];
+        for (var i = 0; i < cant; i++)
+        {
+            datos.push([i, parseInt(Math.random()*100)]);
+        }
+        return datos;
+    }
+    function valores_sep(cant)
+    {
+        for (var i = 0; i < cant; i++)
+        {
+            datax.push(i);
+            datay.push(parseInt(Math.random()*100));
+        }
+    }
+    function show_graph(width, height, xdata, ydata)
+    {
+        if (chart_small != null)
+            chart_small.remove();
+        
+        chart_small = igraph.linechart(0,0,width,height, xdata, ydata, { axis: "0 0 1 1", colors: ["#fff"], smooth: true, shade: true});
+    }
+    function show_stats(stats_array)
+    {
+        $("#e1").html("");
+        var tabla = $("<ul class=\"statitem\" data-role=\"listview\" data-inset=\"true\" data-theme=\"c\"></ul>");
+        for (var i = 0; i < stats_array.length; i++)
+        {
+            tabla.append('<li><div class="ui-grid-a"><div class="ui-block-a">'+stats_array[i].label+'</div><div class="ui-block-b"><button data-theme="d">'+stats_array[i].value+'</button></div></div></li>');
+            
+        }
+        $("#e1").append(tabla);
+        
+        $("#e1 ul.statitem button").button();
+        $("#e1 ul.statitem").listview();
+        //$("#e1 ul.statitem div.ui-btn").css({ "margin-left": });
+    }
+    $(document).ready(function()
+    {
+        window.addEventListener("orientationchange", orientationChange, true);
+        $("#grafico-ph").css({
+            width: viewport_w,
+            height: viewport_h - 20
+        });
+        $("#listaopciones").css({
+            "height": ($("div.ui-btn").eq(0).outerHeight()*4)+"px"
+        });
+        $("#wrapper").css({
+            width: "200%"
+        });
+        $("#listaopciones button").on("click", function()
+        {
+            showgrafico();
+        });
+        $("#timespan-select li").on("click", function()
+        {
+            update_datelist();
+        });
+        hgraph = Raphael("grafico-ph", viewport_h, viewport_w - 20);
+        valores_sep(100);
+        updateg();
+        var ws = $(".inferiorimg").innerWidth() - 20,
+            hs = $("#listaopciones").innerHeight();
+        igraph = Raphael("g1", ws, hs);
+        show_graph(ws, hs, Responses.reporte.datos_grafico.x, Responses.reporte.datos_grafico.y);
+        show_stats(Responses.reporte.stats);
+        //setInterval("updateg()", 200);
+        update_datelist();
+    });
+    function formatea(datearray)
+    {
+        var meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        if (datearray.length == 3) // dia
+        {
+            return datearray[0] + " de " + meses[datearray[1] - 1] + " de " + datearray[2];
+        }
+        else if (datearray.length == 2) // mes
+        {
+            return meses[datearray[0] - 1] + " de " + datearray[1];
+        }
+        else
+        {
+            return ""+datearray;
+        }
+
+    }
+    function update_datelist()
+    {
+       $("#listaopciones").html("");
+        var datos = Responses.reportes;
+        var timespan = $("#timespan-select .ui-btn-active").attr("data-ts");
+        for (var i = 0; i < datos[timespan].length; i++)
+        {
+            var elem = $("<button data-theme=\"c\">"+formatea(datos[timespan][i])+"</button>");
+            $("#listaopciones").append(elem);
+        }
+        $("#listaopciones button").button();
+    }
+    
+    --></script>
+</head> 
+
+<body> 
+
+<div data-role="page" data-theme="a" id="main">
+
+    <div data-role="header">
+        <img src="img/logo.jpg" style="width: 80%;"/>
+        <div id="fechahora" style="margin: 5px; display: inline-block;">
+            <span id="fecha">20/08</span><br />
+            <span id="hora">17:59</span>
+        </div>
+    </div><!-- /header -->
+
+    <div data-role="content">
+        <div data-role="navbar">
+            <ul id="timespan-select">
+                <li><a href="#" data-ts="dia" class="ui-btn-active">Día</a></li>
+                <li><a href="#" data-ts="mes">Mes</a></li>
+                <li><a href="#" data-ts="ano">Año</a></li>
+            </ul>
+        </div>
+        <div id="listaopciones" style="overflow: auto; margin: 4px;">
+            <button data-theme="c">Fecha 1</button>
+            <button data-theme="c">Fecha 2</button>
+            <button data-theme="c">Fecha 3</button>
+            <button data-theme="c">Fecha 4</button>
+            <button data-theme="c">Fecha 5</button>
+            <button data-theme="c">Fecha 6</button>
+            <button data-theme="c">Fecha 7</button>
+            <button data-theme="c">Fecha 8</button>
+        </div>
+        <div id="panelinferior" style="overflow: auto; width: 100%;">
+            <div class="ui-grid-a" id="wrapper">
+                <div class="ui-block-a inferiorimg" id="g1"></div>
+                <div class="ui-block-b inferiorimg" id="e1"></div>
+            </div><!-- /grid-a -->
+        </div>
+    </div><!-- /content -->
+    <div data-role="footer">
+        <div class="ui-grid-b">
+            <div class="ui-block-a"></div>
+            <div class="ui-block-b">
+                <div class="ui-grid-solo footer-central">
+                    <div class="ui-block-a">
+                        <center><span id="indicador">Gráfico</span></center>
+                    </div>
+                    <div class="ui-block-a">
+                        <center>
+                        <span class="punto punto-activo"></span>
+                        <span class="punto"></span>
+                    </center>
+                    </div>
+                </div>
+            </div>
+            <div class="ui-block-c"></div>
+        </div>
+    </div>
+</div><!-- /page -->
+<div data-role="page" data-theme="b" id="landscape">
+    <!--
+    #404f78
+    #182d5c
+-->
+    <div data-role="content" id="landscape-content">
+        <div id="grafico-sup">TEXTO SUPERIOR</div>
+        <div id="grafico-ph"></div>
+    </div>
+</div>
+</body>
+</html>
