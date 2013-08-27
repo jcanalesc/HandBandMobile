@@ -63,12 +63,26 @@
     {
         width: 100%;
     }
+    #g1
+    {
+        border: 1px solid #222;
+        border-radius: 7px;
+        padding: 10px 3px;
+        background-image: linear-gradient(#404f78,#182d5c);
+        margin-right: 2px;
+    }
     </style>
     <script src="js/jquery-1.9.1.min.js"></script>
     <script src="js/jquery.mobile-1.3.2.min.js"></script>
-    <script type="text/javascript" src="js/raphael-min.js"></script>
-    <script type="text/javascript" src="js/g.raphael-min.js"></script>
-    <script type="text/javascript" src="js/g.line-min.js"></script>
+    <!--
+        <script type="text/javascript" src="js/raphael-min.js"></script>
+        <script type="text/javascript" src="js/g.raphael-min.js"></script>
+        <script type="text/javascript" src="js/g.line-min.js"></script>
+    -->
+    <script type="text/javascript" src="js/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="js/flot/jquery.flot.time.min.js"></script>
+    <script type="text/javascript" src="js/flot/jquery.flot.resize.min.js"></script>
+
     <script type="text/javascript" src="js/dummy-data.js"></script>
     <script type="text/javascript">
     <!--
@@ -76,12 +90,52 @@
     var viewport_w = window.innerWidth;
     var viewport_h = window.innerHeight;
     var chart = null, chart_small = null;
-    var datax = [], datay = [];
+    var dataxy = [];
+    var boton_activo = "dia";
+
+    var opts_grafico_grande = {
+        xaxis:
+        {
+            tickColor: "#aaa",
+            tickFormatter: function(numb, obj)
+            {
+                if (numb % 1 === 0)
+                    return parseInt(numb);
+                else
+                    return "";
+            } 
+        },
+        yaxis:
+        {
+            tickColor: "#aaa",
+            tickFormatter: function(numb, obj)
+            {
+                if (numb % 1 === 0)
+                    return parseInt(numb);
+                else
+                    return "";
+            } 
+        },
+        grid:
+        {
+            color: "#aaa",
+            margin: 10
+        },
+        series:
+        {
+            lines:
+            {
+                lineWidth: 4,
+                fill: true,
+                fillColor: "rgba(0, 11, 163, 0.4)"
+            }
+        }
+    };
 
     function showgrafico()
     {
         $.mobile.changePage("#landscape", {changeHash: false, transition: "none"});
-        
+        updateg();
     }
     function orientationChange(e)
     {
@@ -91,26 +145,15 @@
         }
         else
         {
-
             $.mobile.changePage("#main", {changeHash: false, transition: "none" });
+            $("a[data-ts]").removeClass("ui-btn-active").filter("[data-ts='"+boton_activo+"']").addClass("ui-btn-active");
         }
     }
     function updateg()
-        {
-            datay = datay.slice(1);
-
-            var fluctuacion = 2.0;
-
-            var nextval = datay.unshift() + (-fluctuacion/2 + Math.random() * fluctuacion);
-            if (nextval > 100) nextval = 100;
-            if (nextval < 0) nextval = 0;
-            datay.push(nextval);
-            if (chart != null)
-                chart.remove();
-            //g.txtAttr = { font: '12px Arial, sans-serif', fill: '#fff' };
-            chart = hgraph.linechart(10,5,viewport_h-10, viewport_w - 40, datax, datay, { axis: "0 0 1 1", colors: ["#fff"], smooth: true, shade: true});
-
-        }
+    {
+        dataxy = Responses.genteActual.datos;
+        $.plot("#grafico-ph",[{data: dataxy, color: "#fff"}], opts_grafico_grande);
+    }
     function valores(cant)
     {
         var datos = [];
@@ -128,12 +171,9 @@
             datay.push(parseInt(Math.random()*100));
         }
     }
-    function show_graph(width, height, xdata, ydata)
+    function show_graph(selector, data)
     {
-        if (chart_small != null)
-            chart_small.remove();
-        
-        chart_small = igraph.linechart(0,0,width,height, xdata, ydata, { axis: "0 0 1 1", colors: ["#fff"], smooth: true, shade: true});
+        $.plot(selector, [{data: data, color: "#fff"}], opts_grafico_grande);
     }
     function show_stats(stats_array)
     {
@@ -152,10 +192,12 @@
     }
     $(document).ready(function()
     {
+        var marg = 10;
+        boton_activo = "dia";
         window.addEventListener("orientationchange", orientationChange, true);
         $("#grafico-ph").css({
-            width: viewport_w,
-            height: viewport_h - 20
+            width: viewport_h - marg,
+            height: viewport_w - 20 - marg
         });
         $("#listaopciones").css({
             "height": ($("div.ui-btn").eq(0).outerHeight()*4)+"px"
@@ -170,17 +212,37 @@
         $("#timespan-select li").on("click", function()
         {
             update_datelist();
+            boton_activo = $(this).find("a").attr("data-ts");
         });
-        hgraph = Raphael("grafico-ph", viewport_h, viewport_w - 20);
-        valores_sep(100);
         updateg();
-        var ws = $(".inferiorimg").innerWidth() - 20,
+        var ws = $(".inferiorimg").innerWidth(),
             hs = $("#listaopciones").innerHeight();
-        igraph = Raphael("g1", ws, hs);
-        show_graph(ws, hs, Responses.reporte.datos_grafico.x, Responses.reporte.datos_grafico.y);
+        
+        $("#g1").css({
+            width: ws,
+            height: hs + 20
+        });
+
+        show_graph("#g1", Responses.reporte.datos_grafico);
         show_stats(Responses.reporte.stats);
         //setInterval("updateg()", 200);
         update_datelist();
+        $("#panelinferior").on("scroll", function(e)
+        {
+            if ($(this).scrollLeft() > $(this).width() / 2)
+            {
+                // estoy en estadisticas
+                $("span.punto").eq(0).removeClass("punto-activo");
+                $("span.punto").eq(1).addClass("punto-activo");
+                $("#indicador").html("Estadísticas");
+            }
+            else
+            {
+                $("span.punto").eq(1).removeClass("punto-activo");
+                $("span.punto").eq(0).addClass("punto-activo");
+                $("#indicador").html("Gráfico");
+            }
+        });
     });
     function formatea(datearray)
     {
