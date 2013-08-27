@@ -65,12 +65,22 @@
     }
     #g1
     {
-        border: 1px solid #222;
+        /* border: 1px solid #222; */
         border-radius: 7px;
-        padding: 10px 3px;
+        background-image: -webkit-linear-gradient(#404f78,#182d5c);
+        background-image: -moz-linear-gradient(#404f78,#182d5c);
+        background-image: -ms-linear-gradient(#404f78,#182d5c);
+        background-image: -o-linear-gradient(#404f78,#182d5c);
         background-image: linear-gradient(#404f78,#182d5c);
-        margin-right: 2px;
     }
+    @-webkit-keyframes rotation
+    {
+        from {-webkit-transform: rotate(0deg);  }
+        to   {-webkit-transform: rotate(359deg);}
+    }
+
+    
+
     </style>
     <script src="js/jquery-1.9.1.min.js"></script>
     <script src="js/jquery.mobile-1.3.2.min.js"></script>
@@ -92,6 +102,8 @@
     var chart = null, chart_small = null;
     var dataxy = [];
     var boton_activo = "dia";
+    var req_activo = ["mes", [5, 2013]];
+    var loading_data = false;
 
     var opts_grafico_grande = {
         xaxis:
@@ -197,10 +209,10 @@
         window.addEventListener("orientationchange", orientationChange, true);
         $("#grafico-ph").css({
             width: viewport_h - marg,
-            height: viewport_w - 20 - marg
+            height: viewport_w - $("#grafico-sup").outerHeight() - marg
         });
         $("#listaopciones").css({
-            "height": ($("div.ui-btn").eq(0).outerHeight()*4)+"px"
+            "height": ($("div.ui-btn").eq(0).outerHeight()*5)+"px"
         });
         $("#wrapper").css({
             width: "200%"
@@ -215,12 +227,12 @@
             boton_activo = $(this).find("a").attr("data-ts");
         });
         updateg();
-        var ws = $(".inferiorimg").innerWidth(),
-            hs = $("#listaopciones").innerHeight();
+        var ws = $("#inferiorimg").innerWidth(),
+            hs = $("#todo").innerHeight() - $("#elem1").outerHeight() - $("#elem2").outerHeight() - $("#foot").outerHeight() - 16 ;
         
         $("#g1").css({
-            width: ws,
-            height: hs + 20
+            height: hs + 20,
+            "margin-top": "16px"
         });
 
         show_graph("#g1", Responses.reporte.datos_grafico);
@@ -241,6 +253,20 @@
                 $("span.punto").eq(1).removeClass("punto-activo");
                 $("span.punto").eq(0).addClass("punto-activo");
                 $("#indicador").html("Gráfico");
+            }
+        });
+        $("#reload-button").on("click", function()
+        {
+            if (loading_data)
+            {
+                // regresa a normal
+                $("#reload-button-img").css("-webkit-animation", "none");
+                loading_data = false;
+            }
+            else
+            {
+                $("#reload-button-img").css("-webkit-animation", "rotation 1s infinite linear");
+                loading_data = true;
             }
         });
     });
@@ -283,22 +309,21 @@
 <div data-role="page" data-theme="a" id="main">
 
     <div data-role="header">
-        <img src="img/logo.jpg" style="width: 80%;"/>
-        <div id="fechahora" style="margin: 5px; display: inline-block;">
-            <span id="fecha">20/08</span><br />
-            <span id="hora">17:59</span>
+        <img src="img/logo.jpg" style="width: 80%; display: inline-block;" valign="top"/>
+        <div id="reload" style="display:inline-block;">
+            <button id="reload-button" data-mini="true"><img id="reload-button-img" src="img/refresh.png" style="width: 24px; height: 24px;"/></button>
         </div>
     </div><!-- /header -->
 
-    <div data-role="content">
-        <div data-role="navbar">
+    <div data-role="content" id="todo">
+        <div data-role="navbar" id="elem1">
             <ul id="timespan-select">
                 <li><a href="#" data-ts="dia" class="ui-btn-active">Día</a></li>
                 <li><a href="#" data-ts="mes">Mes</a></li>
                 <li><a href="#" data-ts="ano">Año</a></li>
             </ul>
         </div>
-        <div id="listaopciones" style="overflow: auto; margin: 4px;">
+        <div id="listaopciones" style="overflow: auto; margin: 4px;" id="elem2">
             <button data-theme="c">Fecha 1</button>
             <button data-theme="c">Fecha 2</button>
             <button data-theme="c">Fecha 3</button>
@@ -310,12 +335,14 @@
         </div>
         <div id="panelinferior" style="overflow: auto; width: 100%;">
             <div class="ui-grid-a" id="wrapper">
-                <div class="ui-block-a inferiorimg" id="g1"></div>
+                <div class="ui-block-a inferiorimg">
+                    <div id="g1"></div>
+                </div>
                 <div class="ui-block-b inferiorimg" id="e1"></div>
             </div><!-- /grid-a -->
         </div>
     </div><!-- /content -->
-    <div data-role="footer">
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false" id="foot">
         <div class="ui-grid-b">
             <div class="ui-block-a"></div>
             <div class="ui-block-b">
@@ -341,7 +368,7 @@
     #182d5c
 -->
     <div data-role="content" id="landscape-content">
-        <div id="grafico-sup">TEXTO SUPERIOR</div>
+        <div id="grafico-sup"><center>Personas: <span id="genteActual">0</span></center></div>
         <div id="grafico-ph"></div>
     </div>
 </div>
