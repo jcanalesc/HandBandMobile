@@ -83,7 +83,26 @@
 
     </style>
     <script src="js/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript">
+    $(document).on("mobileinit", function()
+    {
+        /* conf */
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+        /* conf */
+    });
+    </script>
     <script src="js/jquery.mobile-1.3.2.min.js"></script>
+    <script type="text/javascript">
+    $(document).on("mobileinit", function()
+    {
+        /* conf */
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+        /* conf */
+    });
+    </script>
+    
     <!--
         <script type="text/javascript" src="js/raphael-min.js"></script>
         <script type="text/javascript" src="js/g.raphael-min.js"></script>
@@ -96,7 +115,12 @@
     <script type="text/javascript" src="js/dummy-data.js"></script>
     <script type="text/javascript">
     <!--
+    $.support.cors = true;
+    $.mobile.allowCrossDomainPages = true;
+    var debug = null;
+    var strmeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     var hgraph = null, igraph = null;
+    // TODO: Arreglar esto si la aplicacion se inicia en landscape
     var viewport_w = window.innerWidth;
     var viewport_h = window.innerHeight;
     var chart = null, chart_small = null;
@@ -104,6 +128,11 @@
     var boton_activo = "dia";
     var req_activo = ["mes", [5, 2013]];
     var loading_data = false;
+    var server_host = "192.168.1.9:5000"; //"186.64.120.145" 
+    var update_handler = null;
+    var cantidad_datos_grafico = 100;
+    var from_login = false;
+    var appid = null;
 
     var opts_grafico_grande = {
         xaxis:
@@ -154,17 +183,47 @@
         if (window.orientation != 0)
         {
             showgrafico();
+            update_handler = setInterval("updateg()", 1000);
         }
         else
         {
             $.mobile.changePage("#main", {changeHash: false, transition: "none" });
             $("a[data-ts]").removeClass("ui-btn-active").filter("[data-ts='"+boton_activo+"']").addClass("ui-btn-active");
+            if (update_handler != null)
+                clearInterval(update_handler);
         }
     }
     function updateg()
     {
-        dataxy = Responses.genteActual.datos;
-        $.plot("#grafico-ph",[{data: dataxy, color: "#fff"}], opts_grafico_grande);
+        $.ajax({
+            url: "http://" + server_host + "/genteActual",
+            type: "get",
+            data: {
+                "appid": appid      
+            },
+            dataType: "json",
+            crossDomain: true,
+            success: function(obj)
+            {
+                var idx = 1;
+                if (dataxy.length > 0)
+                {
+                    idx = dataxy[dataxy.length-1][0]+1;
+                }
+                if (dataxy.length > cantidad_datos_grafico)
+                {
+                    var item = dataxy.splice(0,1);
+                }
+                dataxy.push([idx, obj.res[0]]);
+                $("#genteActual").html(obj.res[0]);
+                $.plot("#grafico-ph",[{data: dataxy, color: "#fff"}], opts_grafico_grande);
+            },
+            error: function(jqXHR, textStatus, errorThrown)
+            {
+                alert(textStatus + ": " + errorThrown);
+            }
+        });    
+        
     }
     function valores(cant)
     {
@@ -185,7 +244,24 @@
     }
     function show_graph(selector, data)
     {
-        $.plot(selector, [{data: data, color: "#fff"}], opts_grafico_grande);
+        var opts_adicionales = $.extend(true,{},opts_grafico_grande);
+        //console.log(opts_adicionales);
+        if (req_activo[0] == "dia")
+        {
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%H:%M", minTickSize: [1, "hour"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        else if (req_activo[0] == "mes")
+        {
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%d", minTickSize: [3, "day"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        else
+        {   
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%b", monthNames: strmeses, minTickSize: [3, "month"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        $.plot(selector, [{data: data, color: "#fff"}], opts_adicionales);
     }
     function show_stats(stats_array)
     {
@@ -202,7 +278,85 @@
         $("#e1 ul.statitem").listview();
         //$("#e1 ul.statitem div.ui-btn").css({ "margin-left": });
     }
-    $(document).ready(function()
+
+    function toggle_load(forceload)
+    {
+        if (loading_data && typeof forceload === "undefined")
+        {
+            // regresa a normal
+            $("#reload-button-img").css("-webkit-animation", "none");
+            loading_data = false;
+        }
+        else
+        {
+            $("#reload-button-img").css("-webkit-animation", "rotation 1s infinite linear");
+            loading_data = true;
+        }
+    }
+
+    function poblate_responses()
+    {
+        try
+        {
+            toggle_load(true);
+            var rp = req_activo[1];
+            if (typeof req_activo[1] === "object")
+                rp = req_activo[1].join("/");
+        $.ajax({
+            url: "http://" + server_host + "/appdata",
+            type: "get",
+            dataType: "json",
+            crossDomain: true,
+            data: {
+                "tiporeporte": req_activo[0],
+                "reporte": rp,
+                "ts": (new Date()).getTime(),
+                "appid": appid
+            },
+            success: function(obj)
+            {
+                toggle_load();
+                Responses = obj;
+                show_graph("#g1", Responses.reporte.datos_grafico);
+                show_stats(Responses.reporte.stats);
+                update_datelist();
+            },
+            statusCode: {
+                404: function()
+                {
+                    alert("404");
+                },
+                500: function()
+                {
+                    alert("500");
+                },
+                405: function()
+                {
+                    alert("405");
+                }
+            }
+        });    
+        }
+        catch (e)
+        {
+            alert(e);
+        }
+        
+
+    }
+
+    
+
+    function button_handler() 
+    {
+        var idx = $(this).attr("data-datearray");
+        req_activo = [boton_activo, Responses.reportes[boton_activo][idx]];
+        poblate_responses();
+        show_graph("#g1", Responses.reporte.datos_grafico);
+        show_stats(Responses.reporte.stats);
+        $("#consulta").html(formatea(req_activo[1], true));
+    }
+    function inicializa_principal()
     {
         var marg = 10;
         boton_activo = "dia";
@@ -212,23 +366,22 @@
             height: viewport_w - $("#grafico-sup").outerHeight() - marg
         });
         $("#listaopciones").css({
-            "height": ($("div.ui-btn").eq(0).outerHeight()*5)+"px"
+            "height": ($("#listaopciones div.ui-btn").eq(0).outerHeight()*4)+"px"
         });
         $("#wrapper").css({
             width: "200%"
-        });
-        $("#listaopciones button").on("click", function()
-        {
-            showgrafico();
         });
         $("#timespan-select li").on("click", function()
         {
             update_datelist();
             boton_activo = $(this).find("a").attr("data-ts");
         });
-        updateg();
+        
+        show_stats(Responses.reporte.stats);
+        update_datelist();
+
         var ws = $("#inferiorimg").innerWidth(),
-            hs = $("#todo").innerHeight() - $("#elem1").outerHeight() - $("#elem2").outerHeight() - $("#foot").outerHeight() - 16 ;
+            hs = $("#e1").innerHeight();
         
         $("#g1").css({
             height: hs + 20,
@@ -236,9 +389,9 @@
         });
 
         show_graph("#g1", Responses.reporte.datos_grafico);
-        show_stats(Responses.reporte.stats);
+        
         //setInterval("updateg()", 200);
-        update_datelist();
+        
         $("#panelinferior").on("scroll", function(e)
         {
             if ($(this).scrollLeft() > $(this).width() / 2)
@@ -257,30 +410,90 @@
         });
         $("#reload-button").on("click", function()
         {
-            if (loading_data)
+            poblate_responses();
+        });
+    }
+
+    $(document).bind("pagechange", function(event, data)
+    {
+        var pagina = data.toPage;
+        if (pagina.attr("id") == "main" && from_login)
+        {
+            inicializa_principal();
+            poblate_responses();
+            $.mobile.hidePageLoadingMsg();
+            from_login = false;
+        }
+    });
+    $(document).ready(function()
+    {
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+
+        if (localStorage.loggedIn == true)
+        {
+            appid = localStorage.appid;
+            $.mobile.changePage("#main", {changeHash: false, transition: "none"});
+        }
+
+        $("#loginform").submit(function(e)
+        {
+            e.preventDefault();
+            $.ajax({
+            url: "http://" + server_host + "/applogin",
+            type: "get",
+            dataType: "json",
+            crossDomain: true,
+            data: {
+                user: $("#username").val(),
+                pass: $("#password").val()
+            },
+            success: function(obj)
             {
-                // regresa a normal
-                $("#reload-button-img").css("-webkit-animation", "none");
-                loading_data = false;
-            }
-            else
+                if (obj.success == true)
+                {
+                    localStorage.loggedIn = true;
+                    localStorage.appid = obj.appid;
+                    appid = localStorage.appid;
+                    $.mobile.showPageLoadingMsg();
+                    from_login = true;
+                    setTimeout(function()
+                    {
+                        $.mobile.changePage("#main", {changeHash: false, transition: "none"}); 
+
+                    }, 700);
+                }
+                else
+                {
+                    alert("Usuario o contraseña incorrectos.");
+                }
+            },
+            error: function()
             {
-                $("#reload-button-img").css("-webkit-animation", "rotation 1s infinite linear");
-                loading_data = true;
+                alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
             }
+        });    
+            
+            
         });
     });
-    function formatea(datearray)
+    function formatea(datearray, short)
     {
         var meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
         if (datearray.length == 3) // dia
         {
-            return datearray[0] + " de " + meses[datearray[1] - 1] + " de " + datearray[2];
+            if (typeof short === "undefined")
+                return datearray[0] + " de " + meses[datearray[1] - 1] + " de " + datearray[2];
+            else
+                return datearray[0] + "-" + strmeses[datearray[1] - 1] + "-" + datearray[2];
         }
         else if (datearray.length == 2) // mes
         {
-            return meses[datearray[0] - 1] + " de " + datearray[1];
+            if (typeof short === "undefined")
+                return meses[datearray[0] - 1] + " de " + datearray[1];
+            else
+                return strmeses[datearray[0] - 1] + "-" + datearray[1];
         }
         else
         {
@@ -295,16 +508,36 @@
         var timespan = $("#timespan-select .ui-btn-active").attr("data-ts");
         for (var i = 0; i < datos[timespan].length; i++)
         {
-            var elem = $("<button data-theme=\"c\">"+formatea(datos[timespan][i])+"</button>");
+            var elem = $("<button data-theme=\"c\" data-datearray=\""+i+"\">"+formatea(datos[timespan][i])+"</button>");
             $("#listaopciones").append(elem);
         }
         $("#listaopciones button").button();
+        $("#listaopciones button").on("click", button_handler);
     }
     
     --></script>
 </head> 
 
 <body> 
+<div data-role="page" data-theme="c">
+    <div data-role="header">
+        <img src="img/logo.jpg" style="width: 80%; display: inline-block;" valign="top"/>
+    </div><!-- /header -->
+    <div data-role="content">
+        <!-- aca formulario de login -->
+        <form action="#" method="post" id="loginform" data-ajax="false">
+            <div data-role="fieldcontain">
+                 <label for="username">Nombre de usuario:</label>
+                 <input type="text" name="username" id="username" value="" placeholder="usuario"/>
+            </div>
+            <div data-role="fieldcontain">
+                 <label for="password">Contraseña:</label>
+                 <input type="password" name="password" id="password" value="" placeholder="****"/>
+            </div>
+            <input type="submit" value="Iniciar sesión" />
+        </form>
+    </div>
+</div>
 
 <div data-role="page" data-theme="a" id="main">
 
@@ -323,8 +556,10 @@
                 <li><a href="#" data-ts="ano">Año</a></li>
             </ul>
         </div>
-        <div id="listaopciones" style="overflow: auto; margin: 4px;" id="elem2">
-            <button data-theme="c">Fecha 1</button>
+        <div id="listaopciones" style="overflow: auto; margin: 4px;">
+            
+            <button data-theme="c">Cargando...</button>
+            <!-- 
             <button data-theme="c">Fecha 2</button>
             <button data-theme="c">Fecha 3</button>
             <button data-theme="c">Fecha 4</button>
@@ -332,6 +567,7 @@
             <button data-theme="c">Fecha 6</button>
             <button data-theme="c">Fecha 7</button>
             <button data-theme="c">Fecha 8</button>
+        -->
         </div>
         <div id="panelinferior" style="overflow: auto; width: 100%;">
             <div class="ui-grid-a" id="wrapper">
@@ -348,7 +584,7 @@
             <div class="ui-block-b">
                 <div class="ui-grid-solo footer-central">
                     <div class="ui-block-a">
-                        <center><span id="indicador">Gráfico</span></center>
+                        <center><span id="indicador">Gráfico</span><br /><span id="consulta"></span></center>
                     </div>
                     <div class="ui-block-a">
                         <center>

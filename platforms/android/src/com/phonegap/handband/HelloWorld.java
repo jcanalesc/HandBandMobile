@@ -22,6 +22,9 @@ package com.phonegap.handband;
 import android.os.Bundle;
 import org.apache.cordova.*;
 
+import android.view.WindowManager;
+import android.view.Window;
+
 public class HelloWorld extends DroidGap
 {
     @Override
@@ -29,6 +32,8 @@ public class HelloWorld extends DroidGap
     {
         super.onCreate(savedInstanceState);
         // Set by <content src="index.html" /> in config.xml
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+ 
         super.loadUrl(Config.getStartUrl());
         //super.loadUrl("file:///android_asset/www/index.html")
     }
