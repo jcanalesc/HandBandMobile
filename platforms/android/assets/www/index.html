@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="jqm/jquery.mobile.structure-1.3.2.min.css" />
     <!-- <link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.2.min.css"> -->
     <style type="text/css">
-    span.ui-btn-inner
     {
         padding: .9em 20px;
     }
@@ -128,7 +127,8 @@
     var boton_activo = "dia";
     var req_activo = ["mes", [5, 2013]];
     var loading_data = false;
-    var server_host = "192.168.1.9:5000"; //"186.64.120.145" 
+    var server_host = "http://186.64.120.145:5000/"; //"186.64.120.145" 
+    var login_server = server_host;
     var update_handler = null;
     var cantidad_datos_grafico = 100;
     var from_login = false;
@@ -196,7 +196,7 @@
     function updateg()
     {
         $.ajax({
-            url: "http://" + server_host + "/genteActual",
+            url: server_host + "genteActual",
             type: "get",
             data: {
                 "appid": appid      
@@ -303,7 +303,7 @@
             if (typeof req_activo[1] === "object")
                 rp = req_activo[1].join("/");
         $.ajax({
-            url: "http://" + server_host + "/appdata",
+            url: server_host + "appdata",
             type: "get",
             dataType: "json",
             crossDomain: true,
@@ -430,17 +430,13 @@
         $.support.cors = true;
         $.mobile.allowCrossDomainPages = true;
 
-        if (localStorage.loggedIn == true)
-        {
-            appid = localStorage.appid;
-            $.mobile.changePage("#main", {changeHash: false, transition: "none"});
-        }
+        server_host = login_server;
 
         $("#loginform").submit(function(e)
         {
             e.preventDefault();
             $.ajax({
-            url: "http://" + server_host + "/applogin",
+            url: server_host + "appmanager/login",
             type: "get",
             dataType: "json",
             crossDomain: true,
@@ -452,9 +448,11 @@
             {
                 if (obj.success == true)
                 {
-                    localStorage.loggedIn = true;
+                    localStorage.loggedIn = "true";
                     localStorage.appid = obj.appid;
+                    localStorage.host = obj.host
                     appid = localStorage.appid;
+                    server_host = obj.host;
                     $.mobile.showPageLoadingMsg();
                     from_login = true;
                     setTimeout(function()

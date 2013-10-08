@@ -432,53 +432,45 @@
 
         server_host = login_server;
 
-        if (localStorage.loggedIn == true)
-        {
-            appid = localStorage.appid;
-            $.mobile.changePage("#main", {changeHash: false, transition: "none"});
-        }
-
         $("#loginform").submit(function(e)
         {
             e.preventDefault();
             $.ajax({
-            url: server_host + "applogin",
-            type: "get",
-            dataType: "json",
-            crossDomain: true,
-            data: {
-                user: $("#username").val(),
-                pass: $("#password").val()
-            },
-            success: function(obj)
-            {
-                if (obj.success == true)
+                url: server_host + "appmanager/login",
+                type: "get",
+                dataType: "json",
+                crossDomain: true,
+                data: {
+                    user: $("#username").val(),
+                    pass: $("#password").val()
+                },
+                success: function(obj)
                 {
-                    localStorage.loggedIn = true;
-                    localStorage.appid = obj.appid;
-                    localStorage.host = obj.host
-                    appid = localStorage.appid;
-                    server_host = obj.host
-                    $.mobile.showPageLoadingMsg();
-                    from_login = true;
-                    setTimeout(function()
+                    if (obj.success == true)
                     {
-                        $.mobile.changePage("#main", {changeHash: false, transition: "none"}); 
+                        localStorage.loggedIn = "true";
+                        localStorage.appid = obj.appid;
+                        localStorage.host = obj.host
+                        appid = localStorage.appid;
+                        server_host = obj.host;
+                        $.mobile.showPageLoadingMsg();
+                        from_login = true;
+                        setTimeout(function()
+                        {
+                            $.mobile.changePage("#main", {changeHash: false, transition: "none"}); 
 
-                    }, 700);
-                }
-                else
+                        }, 700);
+                    }
+                    else
+                    {
+                        alert("Usuario o contraseña incorrectos.");
+                    }
+                },
+                error: function()
                 {
-                    alert("Usuario o contraseña incorrectos.");
+                    alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
                 }
-            },
-            error: function()
-            {
-                alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
-            }
-        });    
-            
-            
+            });    
         });
     });
     function formatea(datearray, short)
