@@ -1,0 +1,608 @@
+<!DOCTYPE html> 
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <title>Single page template</title> 
+    
+    <link rel="stylesheet" type="text/css" href="themes/handband.min.css" />
+    <link rel="stylesheet" href="jqm/jquery.mobile.structure-1.3.2.min.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.2.min.css"> -->
+    <style type="text/css">
+    {
+        padding: .9em 20px;
+    }
+    .flot-tick-label
+    {
+        color: #fff;
+    }
+    #grafico-sup
+    {
+        height: 20px;
+    }
+    #landscape, #landscape-content
+    {
+        background-image: linear-gradient(#404f78,#182d5c);
+    }
+    #landscape .ui-content
+    {
+        padding: 0px;
+        background-image: linear-gradient(#404f78,#182d5c);
+    }
+    ul.statitem li.ui-li
+    {
+        padding: 1px;
+    }
+    ul.statitem div.ui-block-a
+    {
+        padding: 1em;
+    }
+    ul.statitem span.ui-btn-inner
+    {
+        font-size: 27px;
+        padding: 5px;
+    }
+    span.punto
+    {
+        display: inline-block;
+        width: .6em;
+        height: .6em;
+        -webkit-border-radius: .3em;
+        border-radius: .3em;
+        background-color: #969696;
+        -moz-box-shadow: 0 0 2px 2px #111;
+        -webkit-box-shadow: 0 0 2px 2px #111;
+        box-shadow: 0 0 2px 2px #111;
+    }
+    span.punto-activo
+    {
+        background-color: #fff;
+    }
+    div.footer-central div.ui-block-a
+    {
+        width: 100%;
+    }
+    #g1
+    {
+        /* border: 1px solid #222; */
+        border-radius: 7px;
+        background-image: -webkit-linear-gradient(#404f78,#182d5c);
+        background-image: -moz-linear-gradient(#404f78,#182d5c);
+        background-image: -ms-linear-gradient(#404f78,#182d5c);
+        background-image: -o-linear-gradient(#404f78,#182d5c);
+        background-image: linear-gradient(#404f78,#182d5c);
+    }
+    @-webkit-keyframes rotation
+    {
+        from {-webkit-transform: rotate(0deg);  }
+        to   {-webkit-transform: rotate(359deg);}
+    }
+
+    
+
+    </style>
+    <script src="js/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript">
+    $(document).on("mobileinit", function()
+    {
+        /* conf */
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+        /* conf */
+    });
+    </script>
+    <script src="js/jquery.mobile-1.3.2.min.js"></script>
+    <script type="text/javascript">
+    $(document).on("mobileinit", function()
+    {
+        /* conf */
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+        /* conf */
+    });
+    </script>
+    
+    <!--
+        <script type="text/javascript" src="js/raphael-min.js"></script>
+        <script type="text/javascript" src="js/g.raphael-min.js"></script>
+        <script type="text/javascript" src="js/g.line-min.js"></script>
+    -->
+    <script type="text/javascript" src="js/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="js/flot/jquery.flot.time.min.js"></script>
+    <script type="text/javascript" src="js/flot/jquery.flot.resize.min.js"></script>
+
+    <script type="text/javascript" src="js/dummy-data.js"></script>
+    <script type="text/javascript">
+    <!--
+    $.support.cors = true;
+    $.mobile.allowCrossDomainPages = true;
+    var debug = null;
+    var strmeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    var hgraph = null, igraph = null;
+    // TODO: Arreglar esto si la aplicacion se inicia en landscape
+    var viewport_w = window.innerWidth;
+    var viewport_h = window.innerHeight;
+    var chart = null, chart_small = null;
+    var dataxy = [];
+    var boton_activo = "dia";
+    var req_activo = ["mes", [5, 2013]];
+    var loading_data = false;
+    var server_host = "http://186.64.120.145:5000/"; //"186.64.120.145" 
+    var login_server = server_host;
+    var update_handler = null;
+    var cantidad_datos_grafico = 100;
+    var from_login = false;
+    var appid = null;
+
+    var opts_grafico_grande = {
+        xaxis:
+        {
+            tickColor: "#aaa",
+            tickFormatter: function(numb, obj)
+            {
+                if (numb % 1 === 0)
+                    return parseInt(numb);
+                else
+                    return "";
+            } 
+        },
+        yaxis:
+        {
+            tickColor: "#aaa",
+            tickFormatter: function(numb, obj)
+            {
+                if (numb % 1 === 0)
+                    return parseInt(numb);
+                else
+                    return "";
+            } 
+        },
+        grid:
+        {
+            color: "#aaa",
+            margin: 10
+        },
+        series:
+        {
+            lines:
+            {
+                lineWidth: 4,
+                fill: true,
+                fillColor: "rgba(0, 11, 163, 0.4)"
+            }
+        }
+    };
+
+    function showgrafico()
+    {
+        $.mobile.changePage("#landscape", {changeHash: false, transition: "none"});
+        updateg();
+    }
+    function orientationChange(e)
+    {
+        if (window.orientation != 0)
+        {
+            showgrafico();
+            update_handler = setInterval("updateg()", 1000);
+        }
+        else
+        {
+            $.mobile.changePage("#main", {changeHash: false, transition: "none" });
+            $("a[data-ts]").removeClass("ui-btn-active").filter("[data-ts='"+boton_activo+"']").addClass("ui-btn-active");
+            if (update_handler != null)
+                clearInterval(update_handler);
+        }
+    }
+    function updateg()
+    {
+        $.ajax({
+            url: server_host + "genteActual",
+            type: "get",
+            data: {
+                "appid": appid      
+            },
+            dataType: "json",
+            crossDomain: true,
+            success: function(obj)
+            {
+                var idx = 1;
+                if (dataxy.length > 0)
+                {
+                    idx = dataxy[dataxy.length-1][0]+1;
+                }
+                if (dataxy.length > cantidad_datos_grafico)
+                {
+                    var item = dataxy.splice(0,1);
+                }
+                dataxy.push([idx, obj.res[0]]);
+                $("#genteActual").html(obj.res[0]);
+                $.plot("#grafico-ph",[{data: dataxy, color: "#fff"}], opts_grafico_grande);
+            },
+            error: function(jqXHR, textStatus, errorThrown)
+            {
+                //alert(textStatus + ": " + errorThrown);
+            }
+        });    
+        
+    }
+    function valores(cant)
+    {
+        var datos = [];
+        for (var i = 0; i < cant; i++)
+        {
+            datos.push([i, parseInt(Math.random()*100)]);
+        }
+        return datos;
+    }
+    function valores_sep(cant)
+    {
+        for (var i = 0; i < cant; i++)
+        {
+            datax.push(i);
+            datay.push(parseInt(Math.random()*100));
+        }
+    }
+    function show_graph(selector, data)
+    {
+        var opts_adicionales = $.extend(true,{},opts_grafico_grande);
+        //console.log(opts_adicionales);
+        if (req_activo[0] == "dia")
+        {
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%H:%M", minTickSize: [1, "hour"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        else if (req_activo[0] == "mes")
+        {
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%d", minTickSize: [3, "day"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        else
+        {   
+            $.extend(true,opts_adicionales, {xaxis: {mode: "time", timeFormat: "%b", monthNames: strmeses, minTickSize: [3, "month"]}});
+            delete opts_adicionales.xaxis.tickFormatter;
+        }
+        $.plot(selector, [{data: data, color: "#fff"}], opts_adicionales);
+    }
+    function show_stats(stats_array)
+    {
+        $("#e1").html("");
+        var tabla = $("<ul class=\"statitem\" data-role=\"listview\" data-inset=\"true\" data-theme=\"c\"></ul>");
+        for (var i = 0; i < stats_array.length; i++)
+        {
+            tabla.append('<li><div class="ui-grid-a"><div class="ui-block-a">'+stats_array[i].label+'</div><div class="ui-block-b"><button data-theme="d">'+stats_array[i].value+'</button></div></div></li>');
+            
+        }
+        $("#e1").append(tabla);
+        
+        $("#e1 ul.statitem button").button();
+        $("#e1 ul.statitem").listview();
+        //$("#e1 ul.statitem div.ui-btn").css({ "margin-left": });
+    }
+
+    function toggle_load(forceload)
+    {
+        if (loading_data && typeof forceload === "undefined")
+        {
+            // regresa a normal
+            $("#reload-button-img").css("-webkit-animation", "none");
+            loading_data = false;
+        }
+        else
+        {
+            $("#reload-button-img").css("-webkit-animation", "rotation 1s infinite linear");
+            loading_data = true;
+        }
+    }
+
+    function poblate_responses()
+    {
+        try
+        {
+            toggle_load(true);
+            var rp = req_activo[1];
+            if (typeof req_activo[1] === "object")
+                rp = req_activo[1].join("/");
+        $.ajax({
+            url: server_host + "appdata",
+            type: "get",
+            dataType: "json",
+            crossDomain: true,
+            data: {
+                "tiporeporte": req_activo[0],
+                "reporte": rp,
+                "ts": (new Date()).getTime(),
+                "appid": appid
+            },
+            success: function(obj)
+            {
+                toggle_load();
+                Responses = obj;
+                show_graph("#g1", Responses.reporte.datos_grafico);
+                show_stats(Responses.reporte.stats);
+                update_datelist();
+            },
+            statusCode: {
+                404: function()
+                {
+                    //alert("404");
+                },
+                500: function()
+                {
+                    //alert("500");
+                },
+                405: function()
+                {
+                    //alert("405");
+                }
+            }
+        });    
+        }
+        catch (e)
+        {
+            //alert(e);
+        }
+        
+
+    }
+
+    
+
+    function button_handler() 
+    {
+        var idx = $(this).attr("data-datearray");
+        req_activo = [boton_activo, Responses.reportes[boton_activo][idx]];
+        poblate_responses();
+        show_graph("#g1", Responses.reporte.datos_grafico);
+        show_stats(Responses.reporte.stats);
+        $("#consulta").html(formatea(req_activo[1], true));
+    }
+    function inicializa_principal()
+    {
+        var marg = 10;
+        boton_activo = "dia";
+        window.addEventListener("orientationchange", orientationChange, true);
+        $("#grafico-ph").css({
+            width: viewport_h - marg,
+            height: viewport_w - $("#grafico-sup").outerHeight() - marg
+        });
+        $("#listaopciones").css({
+            "height": ($("#listaopciones div.ui-btn").eq(0).outerHeight()*4)+"px"
+        });
+        $("#wrapper").css({
+            width: "200%"
+        });
+        $("#timespan-select li").on("click", function()
+        {
+            update_datelist();
+            boton_activo = $(this).find("a").attr("data-ts");
+        });
+        
+        show_stats(Responses.reporte.stats);
+        update_datelist();
+
+        var ws = $("#inferiorimg").innerWidth(),
+            hs = $("#e1").innerHeight();
+        
+        $("#g1").css({
+            height: hs + 20,
+            "margin-top": "16px"
+        });
+
+        show_graph("#g1", Responses.reporte.datos_grafico);
+        
+        //setInterval("updateg()", 200);
+        
+        $("#panelinferior").on("scroll", function(e)
+        {
+            if ($(this).scrollLeft() > $(this).width() / 2)
+            {
+                // estoy en estadisticas
+                $("span.punto").eq(0).removeClass("punto-activo");
+                $("span.punto").eq(1).addClass("punto-activo");
+                $("#indicador").html("Estadísticas");
+            }
+            else
+            {
+                $("span.punto").eq(1).removeClass("punto-activo");
+                $("span.punto").eq(0).addClass("punto-activo");
+                $("#indicador").html("Gráfico");
+            }
+        });
+        $("#reload-button").on("click", function()
+        {
+            poblate_responses();
+        });
+    }
+
+    $(document).bind("pagechange", function(event, data)
+    {
+        var pagina = data.toPage;
+        if (pagina.attr("id") == "main" && from_login)
+        {
+            inicializa_principal();
+            poblate_responses();
+            $.mobile.hidePageLoadingMsg();
+            from_login = false;
+        }
+    });
+    $(document).ready(function()
+    {
+        $.support.cors = true;
+        $.mobile.allowCrossDomainPages = true;
+
+        server_host = login_server;
+
+        $("#loginform").submit(function(e)
+        {
+            e.preventDefault();
+            $.ajax({
+                url: server_host + "appmanager/login",
+                type: "get",
+                dataType: "json",
+                crossDomain: true,
+                data: {
+                    user: $("#username").val(),
+                    pass: $("#password").val()
+                },
+                success: function(obj)
+                {
+                    if (obj.success == true)
+                    {
+                        localStorage.loggedIn = "true";
+                        localStorage.appid = obj.appid;
+                        localStorage.host = obj.host
+                        appid = localStorage.appid;
+                        server_host = obj.host;
+                        $.mobile.showPageLoadingMsg();
+                        from_login = true;
+                        setTimeout(function()
+                        {
+                            $.mobile.changePage("#main", {changeHash: false, transition: "none"}); 
+
+                        }, 700);
+                    }
+                    else
+                    {
+                        //alert("Usuario o contraseña incorrectos.");
+                    }
+                },
+                error: function()
+                {
+                    //alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
+                }
+            });    
+        });
+    });
+    function formatea(datearray, short)
+    {
+        var meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        if (datearray.length == 3) // dia
+        {
+            if (typeof short === "undefined")
+                return datearray[0] + " de " + meses[datearray[1] - 1] + " de " + datearray[2];
+            else
+                return datearray[0] + "-" + strmeses[datearray[1] - 1] + "-" + datearray[2];
+        }
+        else if (datearray.length == 2) // mes
+        {
+            if (typeof short === "undefined")
+                return meses[datearray[0] - 1] + " de " + datearray[1];
+            else
+                return strmeses[datearray[0] - 1] + "-" + datearray[1];
+        }
+        else
+        {
+            return ""+datearray;
+        }
+
+    }
+    function update_datelist()
+    {
+       $("#listaopciones").html("");
+        var datos = Responses.reportes;
+        var timespan = $("#timespan-select .ui-btn-active").attr("data-ts");
+        for (var i = 0; i < datos[timespan].length; i++)
+        {
+            var elem = $("<button data-theme=\"c\" data-datearray=\""+i+"\">"+formatea(datos[timespan][i])+"</button>");
+            $("#listaopciones").append(elem);
+        }
+        $("#listaopciones button").button();
+        $("#listaopciones button").on("click", button_handler);
+    }
+    
+    --></script>
+</head> 
+
+<body> 
+<div data-role="page" data-theme="c">
+    <div data-role="header">
+        <img src="img/logo.jpg" style="width: 80%; display: inline-block;" valign="top"/>
+    </div><!-- /header -->
+    <div data-role="content">
+        <!-- aca formulario de login -->
+        <form action="#" method="post" id="loginform" data-ajax="false">
+            <div data-role="fieldcontain">
+                 <label for="username">Nombre de usuario:</label>
+                 <input type="text" name="username" id="username" value="" placeholder="usuario"/>
+            </div>
+            <div data-role="fieldcontain">
+                 <label for="password">Contraseña:</label>
+                 <input type="password" name="password" id="password" value="" placeholder="****"/>
+            </div>
+            <input type="submit" value="Iniciar sesión" />
+        </form>
+    </div>
+</div>
+
+<div data-role="page" data-theme="a" id="main">
+
+    <div data-role="header">
+        <img src="img/logo.jpg" style="width: 80%; display: inline-block;" valign="top"/>
+        <div id="reload" style="display:inline-block;">
+            <button id="reload-button" data-mini="true"><img id="reload-button-img" src="img/refresh.png" style="width: 24px; height: 24px;"/></button>
+        </div>
+    </div><!-- /header -->
+
+    <div data-role="content" id="todo">
+        <div data-role="navbar" id="elem1">
+            <ul id="timespan-select">
+                <li><a href="#" data-ts="dia" class="ui-btn-active">Día</a></li>
+                <li><a href="#" data-ts="mes">Mes</a></li>
+                <li><a href="#" data-ts="ano">Año</a></li>
+            </ul>
+        </div>
+        <div id="listaopciones" style="overflow: auto; margin: 4px;">
+            
+            <button data-theme="c">Cargando...</button>
+            <!-- 
+            <button data-theme="c">Fecha 2</button>
+            <button data-theme="c">Fecha 3</button>
+            <button data-theme="c">Fecha 4</button>
+            <button data-theme="c">Fecha 5</button>
+            <button data-theme="c">Fecha 6</button>
+            <button data-theme="c">Fecha 7</button>
+            <button data-theme="c">Fecha 8</button>
+        -->
+        </div>
+        <div id="panelinferior" style="overflow: auto; width: 100%;">
+            <div class="ui-grid-a" id="wrapper">
+                <div class="ui-block-a inferiorimg">
+                    <div id="g1"></div>
+                </div>
+                <div class="ui-block-b inferiorimg" id="e1"></div>
+            </div><!-- /grid-a -->
+        </div>
+    </div><!-- /content -->
+    <div data-role="footer" data-position="fixed" data-tap-toggle="false" id="foot">
+        <div class="ui-grid-b">
+            <div class="ui-block-a"></div>
+            <div class="ui-block-b">
+                <div class="ui-grid-solo footer-central">
+                    <div class="ui-block-a">
+                        <center><span id="indicador">Gráfico</span><br /><span id="consulta"></span></center>
+                    </div>
+                    <div class="ui-block-a">
+                        <center>
+                        <span class="punto punto-activo"></span>
+                        <span class="punto"></span>
+                    </center>
+                    </div>
+                </div>
+            </div>
+            <div class="ui-block-c"></div>
+        </div>
+    </div>
+</div><!-- /page -->
+<div data-role="page" data-theme="b" id="landscape">
+    <!--
+    #404f78
+    #182d5c
+-->
+    <div data-role="content" id="landscape-content">
+        <div id="grafico-sup"><center>Personas: <span id="genteActual">0</span></center></div>
+        <div id="grafico-ph"></div>
+    </div>
+</div>
+</body>
+</html>
