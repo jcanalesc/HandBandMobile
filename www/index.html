@@ -220,7 +220,7 @@
             },
             error: function(jqXHR, textStatus, errorThrown)
             {
-                alert(textStatus + ": " + errorThrown);
+                //alert(textStatus + ": " + errorThrown);
             }
         });    
         
@@ -324,22 +324,22 @@
             statusCode: {
                 404: function()
                 {
-                    alert("404");
+                    //alert("404");
                 },
                 500: function()
                 {
-                    alert("500");
+                    //alert("500");
                 },
                 405: function()
                 {
-                    alert("405");
+                    //alert("405");
                 }
             }
         });    
         }
         catch (e)
         {
-            alert(e);
+            //alert(e);
         }
         
 
@@ -463,12 +463,12 @@
                     }
                     else
                     {
-                        alert("Usuario o contraseña incorrectos.");
+                        //alert("Usuario o contraseña incorrectos.");
                     }
                 },
                 error: function()
                 {
-                    alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
+                    //alert("No se ha podido conectar al servidor. Compruebe su conexión a Internet.");
                 }
             });    
         });
