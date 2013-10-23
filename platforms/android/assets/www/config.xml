@@ -23,8 +23,11 @@
     <preference name="disable-cursor" value="false" />
     <preference name="android-minSdkVersion" value="7" />
     <preference name="android-installLocation" value="auto" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackupWebStorage" value="local" />
     <icon src="icon.png" />
     <access origin="*" />
     <access origin="http://127.0.0.1*" />
     <access origin="http://192.168.1.*" />
+    <content src="index.html" />
 </widget>

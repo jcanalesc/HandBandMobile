@@ -8,6 +8,8 @@
     <link rel="stylesheet" type="text/css" href="themes/handband.min.css" />
     <link rel="stylesheet" href="jqm/jquery.mobile.structure-1.3.2.min.css" />
     <!-- <link rel="stylesheet" type="text/css" href="css/jquery.mobile-1.3.2.min.css"> -->
+    <link rel="stylesheet" type="text/css" href="scooch/scooch.css" />
+    <link rel="stylesheet" type="text/css" href="scooch/scooch-style.css" />
     <style type="text/css">
     {
         padding: .9em 20px;
@@ -101,7 +103,7 @@
         /* conf */
     });
     </script>
-    
+    <script type="text/javascript" src="scooch/scooch.js"></script>
     <!--
         <script type="text/javascript" src="js/raphael-min.js"></script>
         <script type="text/javascript" src="js/g.raphael-min.js"></script>
@@ -180,8 +182,15 @@
     }
     function orientationChange(e)
     {
-        if (window.orientation != 0)
+        if (e.orientation == "landscape")
         {
+            viewport_w = $(window).width();
+            viewport_h = $(window).height();
+            var marg = 10;
+            $("#grafico-ph").css({
+                width: viewport_w - marg,
+                height: viewport_h - $("#grafico-sup").outerHeight() - marg
+            });
             showgrafico();
             update_handler = setInterval("updateg()", 1000);
         }
@@ -360,17 +369,13 @@
     {
         var marg = 10;
         boton_activo = "dia";
-        window.addEventListener("orientationchange", orientationChange, true);
-        $("#grafico-ph").css({
-            width: viewport_h - marg,
-            height: viewport_w - $("#grafico-sup").outerHeight() - marg
-        });
+        $(window).on("orientationchange", orientationChange);
+        $(window).orientationchange();
+        
         $("#listaopciones").css({
             "height": ($("#listaopciones div.ui-btn").eq(0).outerHeight()*4)+"px"
         });
-        $("#wrapper").css({
-            width: "200%"
-        });
+        
         $("#timespan-select li").on("click", function()
         {
             update_datelist();
@@ -387,6 +392,8 @@
             height: hs + 20,
             "margin-top": "16px"
         });
+
+        $(".m-scooch").scooch();
 
         show_graph("#g1", Responses.reporte.datos_grafico);
         
@@ -463,7 +470,7 @@
                     }
                     else
                     {
-                        //alert("Usuario o contraseña incorrectos.");
+                        alert("Usuario o contraseña incorrectos.");
                     }
                 },
                 error: function()
@@ -565,12 +572,11 @@
             <button data-theme="c">Fecha 8</button>
         -->
         </div>
-        <div id="panelinferior" style="overflow: auto; width: 100%;">
-            <div class="ui-grid-a" id="wrapper">
-                <div class="ui-block-a inferiorimg">
-                    <div id="g1"></div>
+        <div id="panelinferior" style="overflow: auto; width: 100%;" class="m-scooch m-fluid m-center">
+            <div id="wrapper" class="m-scooch-inner">
+                <div id="g1" class="m-item m-active"></div>
+                <div id="e1" class="m-item">
                 </div>
-                <div class="ui-block-b inferiorimg" id="e1"></div>
             </div><!-- /grid-a -->
         </div>
     </div><!-- /content -->
