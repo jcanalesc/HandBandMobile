@@ -182,7 +182,7 @@
     }
     function orientationChange(e)
     {
-        if (e.orientation == "landscape")
+        if (e.orientation == "landscape" && typeof isDesktop === "undefined")
         {
             viewport_w = $(window).width();
             viewport_h = $(window).height();
@@ -194,7 +194,7 @@
             showgrafico();
             update_handler = setInterval("updateg()", 1000);
         }
-        else
+        else if ($.mobile.activePage.attr("id") != "main")
         {
             $.mobile.changePage("#main", {changeHash: false, transition: "none" });
             $("a[data-ts]").removeClass("ui-btn-active").filter("[data-ts='"+boton_activo+"']").addClass("ui-btn-active");
@@ -399,21 +399,21 @@
         
         //setInterval("updateg()", 200);
         
-        $("#panelinferior").on("scroll", function(e)
+        $(".m-scooch").on("afterSlide", function(ev, prevIdx, newIdx)
         {
-            if ($(this).scrollLeft() > $(this).width() / 2)
-            {
-                // estoy en estadisticas
-                $("span.punto").eq(0).removeClass("punto-activo");
-                $("span.punto").eq(1).addClass("punto-activo");
-                $("#indicador").html("Estadísticas");
-            }
-            else
-            {
-                $("span.punto").eq(1).removeClass("punto-activo");
-                $("span.punto").eq(0).addClass("punto-activo");
-                $("#indicador").html("Gráfico");
-            }
+            if (prevIdx + newIdx == 3)
+                if (newIdx == 2)
+                {
+                    $("span.punto").eq(0).removeClass("punto-activo");
+                    $("span.punto").eq(1).addClass("punto-activo");
+                    $("#indicador").html("Estadísticas");
+                }
+                else
+                {
+                    $("span.punto").eq(1).removeClass("punto-activo");
+                    $("span.punto").eq(0).addClass("punto-activo");
+                    $("#indicador").html("Gráfico");
+                }
         });
         $("#reload-button").on("click", function()
         {
